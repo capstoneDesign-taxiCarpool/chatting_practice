@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>STOMP Chat Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+  <style>
+    #chatArea { border:1px solid #ccc; height:300px; overflow:auto; padding:5px; }
+    #controls { margin-bottom:10px; }
+    input, button { margin-right:5px; }
+  </style>
+</head>
+<body>
+<h3>Chat Test</h3>
+<div id="controls">
+  <label>Room ID: <input id="roomId" value="room1"></label>
+  <label>User: <input id="username" value="user1"></label>
+  <button id="btnConnect">Connect</button>
+  <button id="btnDisconnect" disabled>Disconnect</button>
+  <button id="btnEnter" disabled>Enter Room</button>
+  <button id="btnLeave" disabled>Leave Room</button>
+  <br><br>
+  <input id="msgInput" placeholder="Message" disabled>
+  <button id="btnSend" disabled>Send</button>
+</div>
+<div id="chatArea"></div>
+
+<script>
+  let stompClient = null;
+
+  function setUI(connected) {
+    document.querySelectorAll('#btnConnect, #btnDisconnect, #btnEnter, #btnLeave, #msgInput, #btnSend')
+    .forEach(el => el.disabled = false);
+    document.getElementById('btnConnect').disabled = connected;
+    document.getElementById('btnDisconnect').disabled = !connected;
+    document.getElementById('btnEnter').disabled = !connected;
+    document.getElementById('btnLeave').disabled = !connected;
+    document.getElementById('msgInput').disabled = !connected;
+    document.getElementById('btnSend').disabled = !connected;
+  }
+
+  function append(text) {
+    const area = document.getElementById('chatArea');
+    const p = document.createElement('p');
+    p.textContent = text;
+    area.appendChild(p);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  document.getElementById('btnConnect').onclick = () => {
+    const socket = new SockJS('/stomp/chat');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, frame => {
+      setUI(true);
+      append('▶ Connected: ' + frame);
+      const roomId = document.getElementById('roomId').value;
+      // subscribe to room
+      stompClient.subscribe('/sub/chatroom.' + roomId, msg => {
+        append(msg.body);
+      });
+    }, err => {
+      append('✖ Error: ' + err);
+    });
+  };
+
+  document.getElementById('btnDisconnect').onclick = () => {
+    if (stompClient) stompClient.disconnect();
+    setUI(false);
+    append('▶ Disconnected');
+  };
+
+  document.getElementById('btnEnter').onclick = () => {
+    const roomId = document.getElementById('roomId').value;
+    const user = document.getElementById('username').value;
+    stompClient.send('/pub/chat.enter/' + roomId, {}, JSON.stringify({ sender: user }));
+  };
+
+  document.getElementById('btnLeave').onclick = () => {
+    const roomId = document.getElementById('roomId').value;
+    const user = document.getElementById('username').value;
+    stompClient.send('/pub/chat.leave/' + roomId, {}, JSON.stringify({ sender: user }));
+  };
+
+  document.getElementById('btnSend').onclick = () => {
+    const roomId = document.getElementById('roomId').value;
+    const user = document.getElementById('username').value;
+    const msg  = document.getElementById('msgInput').value;
+    stompClient.send('/pub/chat.send/' + roomId, {}, JSON.stringify({
+      sender:  user,
+      message: msg
+    }));
+    document.getElementById('msgInput').value = '';
+  };
+</script>
+</body>
+</html>

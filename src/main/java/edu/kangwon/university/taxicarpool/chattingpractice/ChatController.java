@@ -2,7 +2,6 @@ package edu.kangwon.university.taxicarpool.chattingpractice;
 
 import edu.kangwon.university.taxicarpool.chattingpractice.ChatService.ChatMessage;
 import edu.kangwon.university.taxicarpool.chattingpractice.ChatService.MessageType;
-import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -11,11 +10,16 @@ import org.springframework.stereotype.Controller;
 import java.time.LocalDateTime;
 
 @Controller
-@RequiredArgsConstructor
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatService chatService;
+
+
+    public ChatController(SimpMessagingTemplate messagingTemplate, ChatService chatService) {
+        this.messagingTemplate = messagingTemplate;
+        this.chatService = chatService;
+    }
 
     /**
      * 1) 채팅방 입장
@@ -44,7 +48,7 @@ public class ChatController {
             );
         }
         // 구독 중인 클라이언트에게 발행
-        messagingTemplate.convertAndSend("/topic/chatroom." + roomId, msg);
+        messagingTemplate.convertAndSend("/sub/chatroom." + roomId, msg);
     }
 
     /**
@@ -74,7 +78,7 @@ public class ChatController {
                 LocalDateTime.now()
             );
         }
-        messagingTemplate.convertAndSend("/topic/chatroom." + roomId, msg);
+        messagingTemplate.convertAndSend("/sub/chatroom." + roomId, msg);
     }
 
     /**
@@ -90,6 +94,6 @@ public class ChatController {
             MessageType.LEAVE,
             LocalDateTime.now()
         );
-        messagingTemplate.convertAndSend("/topic/chatroom." + roomId, msg);
+        messagingTemplate.convertAndSend("/sub/chatroom." + roomId, msg);
     }
 }
